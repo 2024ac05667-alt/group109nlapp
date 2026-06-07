@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KG QA Chat</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f7fb; }
+    .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+    h1 { margin-bottom: 8px; }
+    .box { background: white; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); padding: 24px; margin-bottom: 16px; }
+    .hint { color: #555; margin-bottom: 16px; }
+    .input-row { display: flex; gap: 12px; margin-bottom: 16px; }
+    input[type=text] { flex: 1; padding: 12px 14px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 16px; }
+    button { padding: 12px 20px; border: none; border-radius: 8px; background: #2563eb; color: white; font-size: 16px; cursor: pointer; }
+    button:disabled { background: #94a3b8; cursor: not-allowed; }
+    .message { margin-bottom: 16px; }
+    .label { font-weight: 600; margin-bottom: 8px; }
+    pre { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 16px; overflow-x: auto; }
+    .answer { white-space: pre-wrap; background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .footer { color: #475569; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="box">
+      <h1>KG QA Chat</h1>
+      <p class="hint">Ask a question and get a KG-powered answer. Neo4j must be running and the data ingested with <code>build_index.py</code>.</p>
+      <div class="input-row">
+        <input type="text" id="question" placeholder="Ask something like: Who is the CEO at GigaMatrix?" />
+        <button id="askBtn">Ask</button>
+      </div>
+      <div class="message" id="status"></div>
+      <div class="message" id="result" style="display:none;">
+        <div class="label">Translated Cypher</div>
+        <pre id="cypher"></pre>
+        <div class="label">Retrieved Facts</div>
+        <pre id="facts"></pre>
+        <div class="label">Generated Answer</div>
+        <div class="answer" id="answer"></div>
+      </div>
+      <div class="footer">If you want a richer UI or CSV ingestion, use the Python scripts in the repo.</div>
+    </div>
+  </div>
+  <script>
+    const askBtn = document.getElementById('askBtn');
+    const questionInput = document.getElementById('question');
+    const status = document.getElementById('status');
+    const result = document.getElementById('result');
+    const cypherEl = document.getElementById('cypher');
+    const factsEl = document.getElementById('facts');
+    const answerEl = document.getElementById('answer');
+
+    async function askQuestion() {
+      const question = questionInput.value.trim();
+      if (!question) {
+        status.textContent = 'Please enter a question first.';
+        status.style.color = '#b91c1c';
+        return;
+      }
+      askBtn.disabled = true;
+      status.textContent = 'Loading...';
+      status.style.color = '#0f172a';
+      result.style.display = 'none';
+      try {
+        const response = await fetch(`/query?question=${encodeURIComponent(question)}`);
+        const data = await response.json();
+        if (!response.ok) {
+          status.textContent = data.answer || data.detail || 'Query failed.';
+          status.style.color = '#b91c1c';
+        } else {
+          status.textContent = 'Success';
+          status.style.color = '#16a34a';
+          cypherEl.textContent = data.cypher || 'No Cypher returned.';
+          factsEl.textContent = JSON.stringify(data.facts || [], null, 2);
+          answerEl.textContent = data.answer || 'No answer returned.';
+          result.style.display = 'block';
+        }
+      } catch (error) {
+        status.textContent = 'Could not connect to the backend. Is the server running?';
+        status.style.color = '#b91c1c';
+      } finally {
+        askBtn.disabled = false;
+      }
+    }
+
+    askBtn.addEventListener('click', askQuestion);
+    questionInput.addEventListener('keyup', event => {
+      if (event.key === 'Enter') askQuestion();
+    });
+  </script>
+</body>
+</html>

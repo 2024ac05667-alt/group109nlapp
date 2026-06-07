@@ -14,11 +14,18 @@ def _get_generator():
 
 
 def generate_answer(question: str, facts: list):
+    if not facts:
+        return "No matching facts were found in the knowledge graph for that question."
+
     gen = _get_generator()
-    facts_text = "\n".join([str(f) for f in facts]) if facts else "No facts retrieved."
+    facts_text = "\n".join([str(f) for f in facts])
     prompt = (
-        f"Use the facts below to answer the question concisely.\n\n"
+        f"Use the facts below to answer the question concisely and based only on the provided facts.\n\n"
         f"Facts:\n{facts_text}\n\nQuestion: {question}\nAnswer:"
     )
     out = gen(prompt, max_length=128, do_sample=False)
-    return out[0]["generated_text"].strip()
+    answer = out[0]["generated_text"].strip()
+    # If generation repeats the prompt, return the facts directly with a short summary.
+    if answer.startswith(prompt):
+        return "Answer based on retrieved facts: " + facts_text
+    return answer

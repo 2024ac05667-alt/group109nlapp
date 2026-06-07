@@ -1,6 +1,7 @@
 import os
-from fastapi import FastAPI, UploadFile, File, Form
-from fastapi.responses import HTMLResponse, JSONResponse
+import os
+from fastapi import FastAPI, UploadFile, File, Form, Query
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 import csv
 from kg.neo4j_client import Neo4jClient
@@ -58,12 +59,15 @@ except Exception:
 
 app = FastAPI(title="KG-Augmented Generative QA - Group 109")
 
+static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'static'))
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
 neo4j_client = Neo4jClient()
 
 
 @app.get("/")
 def index():
-    return {"message": "This API supports KG ingestion and question answering. Run the Streamlit UI with `streamlit run app/streamlit_app.py`."}
+    return RedirectResponse(url="/static/index.html")
 
 
 @app.post("/ingest")
@@ -95,9 +99,13 @@ async def nl2cypher(question: str = Form(...)):
     return {"cypher": cypher}
 
 
-@app.post("/query")
-async def query(question: str = Form(...)):
-    cypher = translate_question_to_cypher(neo4j_client, question)
+@app.api_route("/query", methods=["GET", "POST"])
+async def query(question: str = Form(None), question_query: str = Query(None, alias="question")):
+    text = question if question is not None else question_query
+    if not text:
+        return JSONResponse({"answer": "Question is required."}, status_code=400)
+
+    cypher = translate_question_to_cypher(neo4j_client, text)
     if not cypher:
         return JSONResponse({"answer": "Could not translate question to graph query."}, status_code=400)
 
@@ -106,5 +114,5 @@ async def query(question: str = Form(...)):
     for r in records:
         facts.append(dict(r))
 
-    answer = generate_answer(question, facts)
-    return {"question": question, "cypher": cypher, "facts": facts, "answer": answer}
+    answer = generate_answer(text, facts)
+    return {"question": text, "cypher": cypher, "facts": facts, "answer": answer}

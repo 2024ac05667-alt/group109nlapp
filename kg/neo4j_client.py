@@ -14,10 +14,11 @@ class Neo4jClient:
     empty results so the application can run in environments without Neo4j.
     """
 
-    def __init__(self, uri: str = None, user: str = None, password: str = None):
+    def __init__(self, uri: str = None, user: str = None, password: str = None, database: str = None):
         uri = uri or os.environ.get("NEO4J_URI", "bolt://localhost:7687")
         user = user or os.environ.get("NEO4J_USER", "neo4j")
         password = password or os.environ.get("NEO4J_PASSWORD", "password")
+        self.database = database or os.environ.get("NEO4J_DATABASE")
         self._available = False
         self.driver = None
         if GraphDatabase is None:
@@ -27,8 +28,12 @@ class Neo4jClient:
         try:
             self.driver = GraphDatabase.driver(uri, auth=(user, password))
             # test a quick connection
-            with self.driver.session() as s:
-                s.run("RETURN 1")
+            if self.database:
+                with self.driver.session(database=self.database) as s:
+                    s.run("RETURN 1").single()
+            else:
+                with self.driver.session() as s:
+                    s.run("RETURN 1").single()
             self._available = True
         except Exception:
             print("Warning: Could not connect to Neo4j at", uri)
@@ -47,13 +52,23 @@ class Neo4jClient:
         if not self._available or self.driver is None:
             print("Neo4j not available — run_query returning empty list.")
             return []
-        with self.driver.session() as session:
-            result = session.run(cypher, parameters or {})
-            return [record.data() for record in result]
+        if self.database:
+            with self.driver.session(database=self.database) as session:
+                result = session.run(cypher, parameters or {})
+                records = list(result)
+        else:
+            with self.driver.session() as session:
+                result = session.run(cypher, parameters or {})
+                records = list(result)
+        return [record.data() for record in records]
 
     def execute_write(self, cypher: str, parameters: dict = None):
         if not self._available or self.driver is None:
             print("Neo4j not available — execute_write is a no-op.")
             return
-        with self.driver.session() as session:
-            session.run(cypher, parameters or {})
+        if self.database:
+            with self.driver.session(database=self.database) as session:
+                session.run(cypher, parameters or {})
+        else:
+            with self.driver.session() as session:
+                session.run(cypher, parameters or {})
