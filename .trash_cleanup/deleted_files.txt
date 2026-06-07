@@ -1,0 +1,4 @@
+Deleted files log
+- KG_QA_Colab_single.ipynb
+- KG_QA_Colab.ipynb
+- __pycache__/nl2cypher.cpython-314.pyc (not removed due to tool limitations)
