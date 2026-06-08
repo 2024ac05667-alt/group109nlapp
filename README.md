@@ -18,22 +18,12 @@ It ingests passages into a Neo4j graph, translates simple natural-language quest
 
 ### Install Python dependencies
 ```powershell
-cd I:\BITS\SEM-3\NLP\Assignment
+cd I:\BITS\Assignment
 python -m venv .venv
 . .venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 ```
 
-### Optional packages
-- `streamlit`: only if you want the UI
-- `spacy` and `en_core_web_sm`: only if you want richer entity/triple extraction
-
-Example optional install:
-```powershell
-python -m pip install streamlit
-python -m pip install spacy
-python -m spacy download en_core_web_sm
-```
 
 ## LLM details
 - Default model: `gpt2`
@@ -41,9 +31,6 @@ python -m spacy download en_core_web_sm
 - Model weights are not included in `requirements.txt` or the repo
 - The first run downloads the weights automatically into the Hugging Face cache
 
-### Notes
-- `gpt2` is free to run locally, but it is a basic model and not as strong as modern commercial LLMs
-- If you want a different model, update `llm/answer.py` and install any extra dependencies required by that model
 
 ## Neo4j setup
 ### Local Neo4j Desktop
@@ -82,35 +69,23 @@ python -m uvicorn backend.main:app --reload --port 8000
 curl "http://127.0.0.1:8000/query?question=Who%20is%20the%20CEO%20of%20the%20company%3F"
 ```
 
-### 5. Optional Streamlit UI
+### 5.  Streamlit UI
 ```powershell
-python -m pip install streamlit
 streamlit run app.py
 ```
 Then open the URL shown in the terminal.
 
-## If Streamlit or spaCy cannot be installed
-This repository is designed to work with the core backend even if the optional packages fail to install.
-- `requirements.txt` contains the core packages needed for FastAPI, Neo4j, and the default LLM
-- `streamlit` is not required unless you want the UI
-- `spacy` is optional; a simple fallback extractor is already included
-
 ## Useful scripts
 - `python prepare_data.py` — generate `data/org_passages.csv`
 - `python build_index.py` — ingest passages into Neo4j
-- `python evaluate.py` — run example queries against the backend
+- `python evaluatcde.py` — run example queries against the backend
 - `python scripts/run_demo.py` — offline demo mode for local QA without Neo4j
 
-## Troubleshooting
-- If `build_index.py` fails with connection refused, make sure `corporg` is started in Neo4j Desktop
-- If auth fails, verify `NEO4J_PASSWORD` matches the Neo4j database password
-- If `git` is not found, install Git for Windows and reopen PowerShell
-
-## Recommended workflow for new team members
+## Recommended workflow 
 1. Clone the repo
 2. Create a virtual environment and install `requirements.txt`
 3. Start Neo4j Desktop and the `corporg` DB
 4. Set environment variables
 5. Run `python build_index.py`
 6. Run `python -m uvicorn backend.main:app --reload --port 8000`
-7. Use the API or optional Streamlit UI
+7. Other Terminal Set environment variables and Run `streamlit run app.py`
